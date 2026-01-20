@@ -1,18 +1,21 @@
+import DashboardView from "../../components/dashboard/DashboardView";
+import { useDashboardStats } from "../../hooks/dashboard/useDashboardStats";
+import { useUpcomingActivities } from "../../hooks/dashboard/useUpcomingActivities";
 
-import TaskList from '../../components/TaskList/TaskList';
-import Sidebar from '../../components/sidebar/Sidedar'
-import './Dashboard.css';
+export default function Dashboard() {
+  const { stats, loading: statsLoading } = useDashboardStats();
+  const { upcoming, loading: upcomingLoading } = useUpcomingActivities();
 
-const Dashboard = () => {
- 
+  const loading = statsLoading || upcomingLoading;
 
+  if (loading) {
+    return <div>Cargando dashboard...</div>;
+  }
 
   return (
-   <>
-    <Sidebar/>
-    <TaskList/>
-   </>
+    <DashboardView
+      stats={stats}
+      upcoming={upcoming}
+    />
   );
-};
-
-export default Dashboard;
+}

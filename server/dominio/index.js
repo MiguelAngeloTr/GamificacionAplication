@@ -1,12 +1,14 @@
 import express from 'express'
 import dotenv from 'dotenv';
-import routes from '../acceso_datos/routes.js'
+import routes from '../src/acceso_datos/routes.js'
 import {createPool} from 'mysql2/promise'
 import cors from 'cors';
 import path from 'path';
 import { dirname } from 'path'
 import { fileURLToPath } from 'url';
 import cookieParser from 'cookie-parser'
+
+
 // Para manejar las variables de entorno env
 dotenv.config()
 
@@ -23,8 +25,7 @@ app.use(express.json())
 app.use(express.static(path.join(__dirname, '../dbimages')))
 
 app.use(cookieParser())
-app.use(routes)
-
+app.use("/api", routes);
 
 
 export const pool = createPool({

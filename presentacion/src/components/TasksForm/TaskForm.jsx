@@ -1,172 +1,235 @@
-import React, { useEffect, useState } from 'react';
-import { Form, Formik } from "formik";
-import './TaskForm.css';
-import { useTasks } from '../../context/Context.jsx';
-import { useParams, useNavigate } from 'react-router-dom';
-import { toast, ToastContainer } from 'react-toastify';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
+// src/components/TasksForm/TaskForm.jsx
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import Input from "../ui/Input";
+import Button from "../ui/Button";
+import { actividadesApi } from "../../api/actividades.api";
 
-const TaskForm = () => {
+/**
+ * Basado en tu JSON real:
+ * {
+ *  id, nombre, estado (number 0/1), descripcion, fecha_inicio, fecha_final,
+ *  tipo, archivo, usuario_id, plan_id, created_at
+ * }
+ *
+ * Este form envía SOLO lo editable y esperado por backend:
+ * nombre, descripcion, tipo, fecha_inicio, fecha_final, estado
+ *
+ * NOTA: usuario_id/plan_id normalmente se asignan en backend (por sesión o lógica de negocio).
+ */
+
+export default function TaskForm() {
+  const { id } = useParams(); // /edit/:id
   const navigate = useNavigate();
-  const { createTask, getTask, updateTask } = useTasks();
 
-  const [dateDifference, setDateDifference] = useState(0);
+  const isEdit = useMemo(() => Boolean(id), [id]);
 
-  const [task, setTask] = useState({
-    nombre: "",
-    descripcion: "",
-    fecha_inicio: "",
-    fecha_final: "",
-    tipo: "",
-    archivo: null,
-  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
-  const params = useParams();
+  // Campos
+  const [nombre, setNombre] = useState("");
+  const [descripcion, setDescripcion] = useState("");
+  const [tipo, setTipo] = useState("");
+  const [fechaInicio, setFechaInicio] = useState(""); // yyyy-mm-dd
+  const [fechaFinal, setFechaFinal] = useState(""); // yyyy-mm-dd
+  const [estado, setEstado] = useState(1); // 1 = activa/pendiente, 0 = inactiva/completada (AJUSTA si aplica)
 
-
-  useEffect(() => {
-    const loadTask = async () => {
-      if (params.id) {
-        const task = await getTask(params.id);
-        setTask({
-          nombre: task.nombre,
-          descripcion: task.descripcion,
-          fecha_inicio: task.fecha_inicio,
-          fecha_final: task.fecha_final,
-          tipo: task.tipo,
-          archivo: null,
-        });
-      }
-    };
-    loadTask();
-  }, [params.id, getTask]);
-
-  const calculateDateDifference = (startDate, endDate) => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const differenceInTime = end.getTime() - start.getTime();
-    const differenceInDays = differenceInTime / (1000 * 3600 * 24);
-    return differenceInDays;
+  const toISODate = (value) => {
+    if (!value) return "";
+    // value puede venir como ISO con hora: 2026-01-06T05:00:00.000Z
+    // o como yyyy-mm-dd
+    const s = String(value);
+    return s.length >= 10 ? s.slice(0, 10) : "";
   };
 
+  const validate = () => {
+    const n = nombre.trim();
+    if (!n) return "El nombre es obligatorio";
+    if (n.length < 3) return "El nombre debe tener al menos 3 caracteres";
+
+    // Validación básica de fechas
+    if (fechaInicio && fechaFinal) {
+      const a = new Date(fechaInicio).getTime();
+      const b = new Date(fechaFinal).getTime();
+      if (Number.isFinite(a) && Number.isFinite(b) && b < a) {
+        return "La fecha final no puede ser menor a la fecha inicio";
+      }
+    }
+
+    return "";
+  };
+
+  useEffect(() => {
+    let mounted = true;
+
+    const load = async () => {
+      setError("");
+      setLoading(true);
+
+      try {
+        if (!isEdit) return;
+
+        const res = await actividadesApi.getById(id);
+        const a = res?.data;
+
+        if (!mounted) return;
+
+        setNombre(a?.nombre ?? "");
+        setDescripcion(a?.descripcion ?? "");
+        setTipo(a?.tipo ?? "");
+        setFechaInicio(toISODate(a?.fecha_inicio));
+        setFechaFinal(toISODate(a?.fecha_final));
+        // estado en tu JSON es número (ej: 1)
+        setEstado(Number(a?.estado ?? 1));
+      } catch (e) {
+        if (!mounted) return;
+        setError(e?.response?.data?.message || "No se pudo cargar la actividad");
+      } finally {
+        if (!mounted) return;
+        setLoading(false);
+      }
+    };
+
+    load();
+
+    return () => {
+      mounted = false;
+    };
+  }, [id, isEdit]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+
+    const msg = validate();
+    if (msg) return setError(msg);
+
+    setSaving(true);
+    try {
+      // Payload alineado a tu BD / backend (con estado numérico)
+      // - fecha_* se envía como 'YYYY-MM-DD' o null
+      // - estado se envía como 0/1
+      const payload = {
+        nombre: nombre.trim(),
+        descripcion: descripcion.trim() || null,
+        tipo: tipo.trim() || null,
+        fecha_inicio: fechaInicio || null,
+        fecha_final: fechaFinal || null,
+        estado: estado ? 1 : 0,
+      };
+
+      if (isEdit) {
+        await actividadesApi.update(id, payload);
+      } else {
+        await actividadesApi.create(payload);
+      }
+
+      navigate("/consultaActividad", { replace: true });
+    } catch (e2) {
+      setError(e2?.response?.data?.message || "No se pudo guardar la actividad");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancel = () => navigate(-1);
+
+  if (loading) {
+    return (
+      <div className="p-4 max-w-2xl mx-auto">
+        <div className="bg-white rounded-xl shadow p-6">Cargando...</div>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <Formik
-        initialValues={task}
-        enableReinitialize={true}
-        validate={(values) => {
-          const validationErrors = {};
-
-          if (!values.nombre) {
-            validationErrors.nombre = "El nombre es obligatorio.";
-          } else if (values.nombre.length > 45) {
-            validationErrors.nombre = "El nombre no debe tener más de 45 caracteres.";
-          }
-
-          if (!values.fecha_inicio) {
-            validationErrors.fecha_inicio = "La fecha de inicio es obligatoria.";
-          } else {
-            const currentDate = new Date();
-            const startDate = new Date(values.fecha_inicio);
-
-            if (startDate < currentDate) {
-              validationErrors.fecha_inicio = "La fecha de inicio no puede ser anterior a la fecha actual.";
-            }
-          }
-
-          if (!values.fecha_final) {
-            validationErrors.fecha_final = "La fecha de finalización es obligatoria.";
-          } else if (values.fecha_inicio && new Date(values.fecha_final) < new Date(values.fecha_inicio)) {
-            validationErrors.fecha_final = "La fecha de finalización no puede ser anterior a la fecha de inicio.";
-          }
-
-          if (!values.tipo) {
-            validationErrors.tipo = "El tipo es obligatorio.";
-          }
-
-          if (values.descripcion.length > 300) {
-            validationErrors.descripcion = "La descripción no debe tener más de 300 caracteres.";
-          }
-
-          return validationErrors;
-        }}
-        onSubmit={async (values, actions) => {
-          console.log(values);
-          
-
-          if (params.id) {
-
-            toast.success("Actividad actualizada con éxito");
-            await updateTask(params.id, values);
-
-            navigate('/dashboard');
-          } else {
-            await createTask(values);
-            toast.success("Actividad creada con éxito");
-          }
-
-          // Calcula la diferencia en días y actualiza el estado
-          const startDate = values.fecha_inicio;
-          const endDate = values.fecha_final;
-          const difference = calculateDateDifference(startDate, endDate);
-          setDateDifference(difference);
-
-
-          setTask({
-            nombre: "",
-            descripcion: "",
-            fecha_inicio: "",
-            fecha_final: "",
-            tipo: "",
-            archivo: null,
-          });
-          actions.resetForm();
-        }}
-      >
-        {({ handleChange, handleSubmit, values, isSubmitting, errors }) => (
-          <Form onSubmit={handleSubmit}>
-            <ToastContainer position="bottom-center" />
-            <h1>
-              {params.id ? "Editar Actividad" : "Agregar Actividad"}
+    <div className="p-4 max-w-2xl mx-auto">
+      <div className="bg-white rounded-xl shadow p-6">
+        <div className="flex items-start justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-2xl font-semibold">
+              {isEdit ? "Editar actividad" : "Crear actividad"}
             </h1>
+            <p className="text-sm text-gray-500">
+              Completa los campos y guarda los cambios.
+            </p>
+          </div>
+        </div>
 
-            <label>Nombre</label>
-            <input type="text" name="nombre" onChange={handleChange} value={values.nombre} />
-            {errors.nombre && <div className="error-message">{errors.nombre}</div>}
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <Input
+            label="Nombre"
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            placeholder="Ej: Sesión práctica SQL"
+            required
+          />
 
-            <label>Descripción</label>
-            <textarea name="descripcion" onChange={handleChange} value={values.descripcion}></textarea>
-            {errors.descripcion && <div className="error-message">{errors.descripcion}</div>}
+          <div className="flex flex-col gap-1">
+            <label className="text-sm text-gray-700">Descripción</label>
+            <textarea
+              className="border rounded px-3 py-2 min-h-[100px] focus:outline-none focus:ring focus:ring-black/20"
+              value={descripcion}
+              onChange={(e) => setDescripcion(e.target.value)}
+              placeholder="Ejercicios, objetivo, entregables..."
+            />
+          </div>
 
-            <label>Fecha de inicio</label>
-            <input type="date" name="fecha_inicio" onChange={handleChange} value={values.fecha_inicio} />
-            {errors.fecha_inicio && <div className="error-message">{errors.fecha_inicio}</div>}
+          <Input
+            label="Tipo"
+            value={tipo}
+            onChange={(e) => setTipo(e.target.value)}
+            placeholder='Ej: "practica", "seguimiento", "curso"'
+          />
 
-            <label>Fecha finalización</label>
-            <input type="date" name="fecha_final" onChange={handleChange} value={values.fecha_final} />
-            {errors.fecha_final && <div className="error-message">{errors.fecha_final}</div>}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label="Fecha inicio"
+              type="date"
+              value={fechaInicio}
+              onChange={(e) => setFechaInicio(e.target.value)}
+            />
+            <Input
+              label="Fecha final"
+              type="date"
+              value={fechaFinal}
+              onChange={(e) => setFechaFinal(e.target.value)}
+            />
+          </div>
 
-            <label>Tipo</label>
-            <select name="tipo" onChange={handleChange} value={values.tipo}>
-              <option value="">Selecciona un tipo</option>
-              <option value="curso">Curso</option>
-              <option value="certificación">Certificación</option>
-              <option value="libros">Libros</option>
-              <option value="Unidad de retorno">Unidad de retorno</option>
-            </select>
-            {errors.tipo && <div className="error-message">{errors.tipo}</div>}
+          {/* Estado: lo mantengo con checkbox pero guardando 0/1 para MySQL */}
+          <div className="flex items-center gap-2">
+            <input
+              id="estado"
+              type="checkbox"
+              checked={estado === 1}
+              onChange={(e) => setEstado(e.target.checked ? 1 : 0)}
+            />
+            <label htmlFor="estado" className="text-sm text-gray-700">
+              Activa
+            </label>
+          </div>
 
-          
-            <button type="submit" className='submit' style={{fontSize:"1.5em", color:"white"}}>
-            {isSubmitting ? <span>Guardando... <FontAwesomeIcon icon={faFloppyDisk} /></span> : <span><FontAwesomeIcon icon={faFloppyDisk} /></span>}
+          {error && <p className="text-sm text-red-600">{error}</p>}
+
+          <div className="flex flex-col md:flex-row gap-3 mt-2">
+            <Button type="submit" loading={saving}>
+              {isEdit ? "Guardar cambios" : "Crear"}
+            </Button>
+
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="w-full md:w-auto border rounded px-4 py-2 text-sm hover:bg-slate-50"
+              disabled={saving}
+            >
+              Cancelar
             </button>
-          </Form>
-        )}
-      </Formik>
+          </div>
+        </form>
+      </div>
     </div>
   );
-};
-
-export default TaskForm;
+}

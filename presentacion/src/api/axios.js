@@ -1,7 +1,12 @@
-import axios from 'axios'
+import axios from "axios";
 
-const instace = axios.create({
-    baseURL: 'http://localhost:4000',
-    withCredentials: true
-})
-export default instace
+const api = axios.create({
+  baseURL: "http://localhost:4000/api",
+  withCredentials: true,
+});
+
+export default api; 
+
+export const loginUserRequest = (user) => api.post("/auth/login", user);
+export const createUserRequest = (user) => api.post("/auth/register", user);
+export const verifyTokenRequest = () => api.get("/auth/me");
