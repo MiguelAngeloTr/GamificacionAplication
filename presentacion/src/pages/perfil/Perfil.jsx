@@ -114,7 +114,13 @@ const ui = {
     marginBottom: 8,
     position: "relative",
   },
-  h2: { margin: 0, fontSize: 13, fontWeight: 950, letterSpacing: ".14em", textTransform: "uppercase" },
+  h2: {
+    margin: 0,
+    fontSize: 13,
+    fontWeight: 950,
+    letterSpacing: ".14em",
+    textTransform: "uppercase",
+  },
   meta: { fontSize: 12, color: "rgba(255,255,255,.55)" },
 
   fieldRow: {
@@ -125,8 +131,18 @@ const ui = {
     borderTop: "1px dashed rgba(255,255,255,.10)",
     position: "relative",
   },
-  fieldLabel: { color: "rgba(255,255,255,.62)", fontSize: 12, fontWeight: 850, letterSpacing: ".03em" },
-  fieldValue: { color: "rgba(255,255,255,.92)", fontSize: 13, fontWeight: 650, wordBreak: "break-word" },
+  fieldLabel: {
+    color: "rgba(255,255,255,.62)",
+    fontSize: 12,
+    fontWeight: 850,
+    letterSpacing: ".03em",
+  },
+  fieldValue: {
+    color: "rgba(255,255,255,.92)",
+    fontSize: 13,
+    fontWeight: 650,
+    wordBreak: "break-word",
+  },
 
   btn: {
     marginTop: 12,
@@ -161,7 +177,13 @@ const ui = {
     background: "rgba(255,255,255,.06)",
     padding: 12,
   },
-  kpiLabel: { fontSize: 11, color: "rgba(255,255,255,.60)", fontWeight: 800, letterSpacing: ".08em", textTransform: "uppercase" },
+  kpiLabel: {
+    fontSize: 11,
+    color: "rgba(255,255,255,.60)",
+    fontWeight: 800,
+    letterSpacing: ".08em",
+    textTransform: "uppercase",
+  },
   kpiValue: { marginTop: 6, fontSize: 18, fontWeight: 950 },
 };
 
@@ -172,7 +194,7 @@ function Chip({ tone = "info", children }) {
       {children}
     </span>
   );
-}
+} 
 
 function Field({ label, value }) {
   return (
@@ -197,15 +219,16 @@ export default function Perfil() {
   const usuario = data?.usuario;
   const roles = data?.roles ?? [];
   const perfil = data?.perfil;
-  const coachRef = data?.coachRef ?? null;
+
+  // viene del backend (profile corregido). Fallback por si aún no actualizas backend.
+  const primaryRole = data?.primaryRole ?? perfil?.tipo ?? "usuario";
 
   const tipoLabel = useMemo(() => {
-    const t = perfil?.tipo ?? "usuario";
-    if (t === "directiva") return "Directiva";
-    if (t === "coach") return "Coach";
-    if (t === "colaborador") return "Colaborador";
+    if (primaryRole === "directiva") return "Directiva";
+    if (primaryRole === "coach") return "Coach";
+    if (primaryRole === "colaborador") return "Colaborador";
     return "Usuario";
-  }, [perfil?.tipo]);
+  }, [primaryRole]);
 
   const toneByTipo = (tipo) => {
     if (tipo === "Directiva") return "info";
@@ -215,7 +238,11 @@ export default function Perfil() {
   };
 
   if (loading) {
-    return <div style={{ padding: 16, color: "rgba(255,255,255,.75)" }}>Cargando perfil...</div>;
+    return (
+      <div style={{ padding: 16, color: "rgba(255,255,255,.75)" }}>
+        Cargando perfil...
+      </div>
+    );
   }
 
   if (error) {
@@ -231,8 +258,12 @@ export default function Perfil() {
             boxShadow: "0 18px 50px rgba(0,0,0,.35)",
           }}
         >
-          <div style={{ fontWeight: 950, marginBottom: 6 }}>No se pudo cargar el perfil</div>
-          <div style={{ fontSize: 13, color: "rgba(255,255,255,.80)" }}>{String(error)}</div>
+          <div style={{ fontWeight: 950, marginBottom: 6 }}>
+            No se pudo cargar el perfil
+          </div>
+          <div style={{ fontSize: 13, color: "rgba(255,255,255,.80)" }}>
+            {String(error)}
+          </div>
 
           <button onClick={refetch} style={ui.btn} type="button">
             Reintentar
@@ -243,7 +274,7 @@ export default function Perfil() {
   }
 
   const fullName =
-    (perfil?.nombre || perfil?.apellido)
+    perfil?.nombre || perfil?.apellido
       ? `${perfil?.nombre ?? ""} ${perfil?.apellido ?? ""}`.trim()
       : usuario?.nombre ?? "—";
 
@@ -268,11 +299,15 @@ export default function Perfil() {
 
           <div>
             <h1 style={ui.title}>Perfil</h1>
-            <p style={ui.subtitle}>Información del usuario, roles y perfil activo según tu sesión.</p>
+            <p style={ui.subtitle}>
+              Información del usuario, roles y datos del perfil según tu sesión.
+            </p>
 
             <div style={ui.statusLine}>
               <span style={{ opacity: 0.9 }}>Estado:</span>
-              <span style={{ fontWeight: 900, color: "rgba(255,255,255,.9)" }}>Autenticado</span>
+              <span style={{ fontWeight: 900, color: "rgba(255,255,255,.9)" }}>
+                Autenticado
+              </span>
               <span style={{ opacity: 0.5 }}>•</span>
               <span>ID: {usuario?.id ?? "—"}</span>
             </div>
@@ -288,7 +323,7 @@ export default function Perfil() {
               </div>
               <div style={ui.kpi}>
                 <div style={ui.kpiLabel}>Coach</div>
-                <div style={ui.kpiValue}>{perfil?.tipo === "colaborador" ? "Asignado" : "—"}</div>
+                <div style={ui.kpiValue}>—</div>
               </div>
             </div>
           </div>
@@ -311,7 +346,7 @@ export default function Perfil() {
           <div style={ui.cardGlow} />
           <div style={ui.cardHeader}>
             <h2 style={ui.h2}>Usuario</h2>
-            <span style={ui.meta}>/auth/me</span>
+            <span style={ui.meta}>/auth/profile</span>
           </div>
 
           <Field label="Nombre" value={usuario?.nombre} />
@@ -319,33 +354,26 @@ export default function Perfil() {
           <Field label="Roles" value={roles.length ? roles.join(", ") : "—"} />
         </div>
 
-        {/* Perfil activo */}
+        {/* Perfil */}
         <div style={ui.card}>
           <div style={ui.cardGlow} />
           <div style={ui.cardHeader}>
-            <h2 style={ui.h2}>Perfil activo</h2>
+            <h2 style={ui.h2}>Perfil</h2>
             <span style={ui.meta}>{tipoLabel}</span>
           </div>
 
-          <Field label="Tipo" value={perfil?.tipo ?? "usuario"} />
+          <Field label="Tipo" value={primaryRole} />
           <Field label="Cédula" value={perfil?.cedula} />
-          <Field label="Nombre" value={perfil?.nombre} />
+          <Field label="Tipo cédula" value={perfil?.tipo_cedula} />
+          <Field label="Nombre" value={perfil?.nombre ?? usuario?.nombre} />
           <Field label="Apellido" value={perfil?.apellido} />
           <Field label="Teléfono" value={perfil?.telefono} />
           <Field label="Dirección" value={perfil?.direccion} />
           <Field label="Nacionalidad" value={perfil?.nacionalidad} />
 
-          {perfil?.tipo === "colaborador" && (
-            <>
-              <Field label="Coach asignado (cédula)" value={perfil?.fk_cedula_coachee ?? "—"} />
-              <Field
-                label="Coach asignado (nombre)"
-                value={coachRef ? `${coachRef.nombre ?? ""} ${coachRef.apellido ?? ""}`.trim() || "—" : "—"}
-              />
-            </>
-          )}
-
-          {perfil?.observacion ? <Field label="Observación" value={perfil.observacion} /> : null}
+          {perfil?.observacion ? (
+            <Field label="Observación" value={perfil.observacion} />
+          ) : null}
         </div>
       </div>
     </div>

@@ -1,28 +1,26 @@
 import { Router } from "express";
-import { requireAuth } from "../../middlewares/validateToken.js";
-
 import {
-  getTasksAll,
-  getTasks,
-  getTask,
-  createTask,
-  updateTask,
-  updateTaskEstado,
-  deleteTask,
+  getActividades,
+  getActividad,
+  createActividad,
+  updateActividad,
+  patchActividadEstado,
+  getActividadPresupuesto,
+  upsertActividadPresupuesto,
 } from "./actividades.controller.js";
 
+import { requireAuth } from "../../middlewares/validateToken.js";
+
 const router = Router();
+router.use(requireAuth);
 
-/*
-  Base: /api/actividades
-*/
+router.get("/", getActividades);
+router.get("/:id", getActividad);
+router.post("/", createActividad);
+router.put("/:id", updateActividad);
+router.patch("/:id/estado", patchActividadEstado);
 
-router.get("/", requireAuth, getTasks);           // mine
-router.get("/all", requireAuth, getTasksAll);     // opcional admin
-router.get("/:id", requireAuth, getTask);
-router.post("/", requireAuth, createTask);
-router.put("/:id", requireAuth, updateTask);
-router.patch("/:id/estado", requireAuth, updateTaskEstado);
-router.delete("/:id", requireAuth, deleteTask);
+router.get("/:id/presupuesto", getActividadPresupuesto);
+router.post("/:id/presupuesto", upsertActividadPresupuesto);
 
 export default router;

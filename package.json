@@ -2,10 +2,10 @@
   "name": "proyectovortex",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "nodemon server/dominio/index.js"
+    "dev": "nodemon --watch src --ext js,mjs --exec node -- ./server/src/dominio/index.js",
+    "start": "node ./src/dominio/index.js"
   },
   "keywords": [],
   "author": "",

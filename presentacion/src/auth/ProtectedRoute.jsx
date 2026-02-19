@@ -3,6 +3,7 @@ import { useAuth } from "./Context";
 import Spinner from "../components/ui/Spinner";
 
 export const ProtectedRoute = ({ allowedRoles = [] }) => {
+  
   const { loading, isAuthenticated, roles } = useAuth();
   const location = useLocation();
 
@@ -20,7 +21,7 @@ export const ProtectedRoute = ({ allowedRoles = [] }) => {
 
   const hasAllowedRole = allowedRoles.some((r) => roles.includes(r));
   if (!hasAllowedRole) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return <Outlet />;

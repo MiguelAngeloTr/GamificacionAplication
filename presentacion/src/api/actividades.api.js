@@ -2,7 +2,7 @@ import api from "./axios";
 
 export const actividadesApi = {
   // GET /api/actividades  (mine)
-  listMine: () => api.get("/actividades"),
+  list: (params) => api.get("/actividades", { params }),
 
   // GET /api/actividades/:id
   getById: (id) => api.get(`/actividades/${id}`),
@@ -13,7 +13,7 @@ export const actividadesApi = {
   // PUT /api/actividades/:id
   update: (id, payload) => api.put(`/actividades/${id}`, payload),
 
-  // PATCH /api/actividades/:id/estado   (toggle)
+  // PATCH /api/actividades/:id/estado  
   toggleEstado: (id, estado) => api.patch(`/actividades/${id}/estado`, { estado }),
 
   // DELETE /api/actividades/:id

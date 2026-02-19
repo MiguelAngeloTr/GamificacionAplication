@@ -1,7 +1,6 @@
 import express from 'express'
 import dotenv from 'dotenv';
-import routes from '../src/acceso_datos/routes.js'
-import {createPool} from 'mysql2/promise'
+import routes from '../acceso_datos/routes.js'
 import cors from 'cors';
 import path from 'path';
 import { dirname } from 'path'
@@ -10,7 +9,11 @@ import cookieParser from 'cookie-parser'
 
 
 // Para manejar las variables de entorno env
+
+// al inicio del archivo
+
 dotenv.config()
+
 
 const app = express();
 
@@ -25,23 +28,20 @@ app.use(express.json())
 app.use(express.static(path.join(__dirname, '../dbimages')))
 
 app.use(cookieParser())
+
+app.use((req, _res, next) => {
+  console.log("REQ:", req.method, req.originalUrl);
+  next();
+});
 app.use("/api", routes);
-
-
-export const pool = createPool({
-    host: process.env.DB_HOST,
-    port: parseInt(process.env.DB_PORT, 10),
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_DATABASE
-
-})
-
 
 
 //procesar datos provenientes del cliente
 
+console.log("BOOT DEBUG BACKEND:", new Date().toISOString(), "PID:", process.pid);
+
 
 //puerto de escucha
-app.listen(process.env.PORT)
-console.log("servidor corriendo en puerto ", process.env.PORT);
+app.listen(process.env.PORT, () => {
+  console.log("servidor corriendo en puerto ", process.env.PORT);
+});

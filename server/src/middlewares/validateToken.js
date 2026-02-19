@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import { pool } from "../../dominio/index.js";
+import { pool } from "../acceso_datos/db.js";
 
 export const requireAuth = async (req, res, next) => {
   const token = req.cookies?.token;

@@ -39,8 +39,19 @@ export const AuthProvider = ({ children }) => {
   }, [checkSession]);
 
   const login = useCallback(async (payload) => {
-    await authApi.login(payload);
+
+    try {
+       await authApi.login(payload);
     await checkSession();
+
+    } catch(err){
+      console.error("status:", err?.response?.status);
+      console.error("data:", err?.response?.data);
+      console.error("sent:", err?.config?.data);
+      throw err;
+    }
+   
+
   }, [checkSession]);
 
   const register = useCallback(async (payload) => {
